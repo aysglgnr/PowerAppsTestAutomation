@@ -1,8 +1,4 @@
 # PowerShell Function App to Windows on Azure
-# Build a PowerShell Function App and deploy it to Azure as a Windows function app.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/en-us/azure/azure-functions/functions-reference-powershell
-
 trigger:
 - master
 
@@ -11,7 +7,7 @@ variables:
   azureSubscription: '4056269a-8168-4e49-a8d6-29f2beca5f2f'
 
   # Function app name
-  functionAppName: ''
+  functionAppName: 'your-function-app-name'
 
   # Agent VM image name
   vmImageName: 'windows-2019'
@@ -30,6 +26,18 @@ stages:
       vmImage: $(vmImageName)
 
     steps:
+    - task: PowerShell@2
+      displayName: 'Set screen resolution'
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Set agent screen resolution to 1920x1080 to avoid sizing issues with Portal  
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          # Wait 10 seconds  
+          Start-Sleep -s 10
+          # Verify Screen Resolution is set to 1920x1080  
+          Get-DisplayResolution
+
     - powershell: |
         if (Test-Path "extensions.csproj") {
             dotnet build extensions.csproj --output ./$(workingDirectory)/bin
@@ -56,7 +64,7 @@ stages:
   jobs:
   - deployment: Deploy
     displayName: Deploy
-    environment: $(functionAppName)
+    environment: '$(functionAppName)-env'
     pool:
       vmImage: $(vmImageName)
 
@@ -68,7 +76,7 @@ stages:
           - task: AzureFunctionApp@1
             displayName: 'Azure functions app deploy'
             inputs:
-              azureSubscription: '$(azureSubscription)'
+              azureSubscription: $(azureSubscription)
               appType: functionApp
               appName: $(functionAppName)
-              package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
+              package: $(Pipeline.Workspace)/drop/$(Build.BuildId).zip
